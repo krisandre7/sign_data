@@ -32,7 +32,7 @@ def train_loop(dataloader: DataLoader,
         
         if batch_index % 100 == 0:
             loss_contrastive, current = loss_contrastive.item(), (batch_index + 1) * len(img1)
-            print(f"loss_contrastive: {loss_contrastive:>7f}  [{(current / size):.2f}%]")
+            print(f"loss: {loss_contrastive:>7f}  [{(current / size):.2f}%]")
     
     return model
 
@@ -54,16 +54,11 @@ def test_loop(dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module):
             output1, output2 = model(img1, img2)
             test_loss += loss_fn(output1, output2, label).item()
             eucledian_distance = nn.functional.pairwise_distance(output1, output2)
-            print(eucledian_distance.item(), label)
-            return
-            # correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-            # print(label)
+            correct += (eucledian_distance.argmax() == label).type(torch.float).sum().item()
 
-        # print("Predicted Eucledian Distance:-",eucledian_distance.item())
-        # print("Actual Label:-",label)
-    # test_loss /= num_batches
-    # correct /= size
-    # print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    test_loss /= num_batches
+    correct /= size
+    print(f"val_accuracy: {(100*correct):>0.1f}%, val_loss: {test_loss:>8f} \n")
 
 def train(train_dataloader: DataLoader, 
           test_dataloader: DataLoader, 
@@ -78,7 +73,7 @@ def train(train_dataloader: DataLoader,
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         new_model = train_loop(train_dataloader, model, loss_fn, optimizer, device)
-        torch.save(new_model, 'nu_model.pt')
+        # torch.save(new_model, 'nu_model.pt')
         test_loop(test_dataloader, model, loss_fn)
         
         # TODO: Implementar checkpoint
@@ -92,10 +87,10 @@ def train(train_dataloader: DataLoader,
     print("Done!")
 
 if __name__ == '__main__':
-    train_dir = "sign_data/train"
-    test_dir = "sign_data/test"
-    train_csv_path = "sign_data/train_data.csv"
-    test_csv_path =  "sign_data/test_data.csv"
+    train_dir = "train"
+    test_dir = "test"
+    train_csv_path = "train_data.csv"
+    test_csv_path =  "test_data.csv"
 
     # Transformações usadas no dataset 
     ds_transforms = transforms.Compose([transforms.Resize((105,105)),
@@ -127,16 +122,16 @@ if __name__ == '__main__':
     loss_fn = ContrastiveLoss()
     optimizer_fn = torch.optim.Adam
     
-    # train(train_dataloader, 
-    #       test_dataloader, 
-    #       model, 
-    #       loss_fn, 
-    #       optimizer_fn, 
-    #       device, 
-    #       learning_rate,
-    #       epochs)
+    train(train_dataloader, 
+          test_dataloader, 
+          model, 
+          loss_fn, 
+          optimizer_fn, 
+          device, 
+          learning_rate,
+          epochs)
     
-    model = torch.load('nu_model.pt')
-    test_loop(test_dataloader, model, loss_fn)
+    # model = torch.load('nu_model.pt')
+    # test_loop(test_dataloader, model, loss_fn)
     
     
