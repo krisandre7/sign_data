@@ -3,3 +3,4 @@ train
 __pycache__
 *.pt
 .vscode
+wandb

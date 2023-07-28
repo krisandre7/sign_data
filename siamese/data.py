@@ -7,16 +7,16 @@ import numpy as np
 import torch
 
 class SiameseData(Dataset):
-  def __init__(self,train_csv=None,train_dir=None,transform=None):
+  def __init__(self,train_csv=None,data_dir=None,transform=None):
     # used to prepare the labels and images path
     self.train_df = pd.read_csv(train_csv, names=["image1","image2","label"])
-    self.train_dir = train_dir    
+    self.data_dir = data_dir    
     self.transform = transform
 
   def __getitem__(self,index):
     # getting the image path
-    image1_path = os.path.join(self.train_dir,self.train_df.iat[index,0])
-    image2_path = os.path.join(self.train_dir,self.train_df.iat[index,1])
+    image1_path = os.path.join(self.data_dir,self.train_df.iat[index,0])
+    image2_path = os.path.join(self.data_dir,self.train_df.iat[index,1])
     
     # Loading the image
     img1: Image.Image = Image.open(image1_path)

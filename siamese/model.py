@@ -2,6 +2,14 @@ import torch.nn as nn
 import torch
 from torch import Tensor
 
+class SiameseBackboneNetwork():
+    # def __init__
+    # AQUI VAI TODA A CAMADA CNN1
+    # TODO
+    # self.siamese_backbone_forward()
+    
+    pass
+
 class SiameseNetwork(nn.Module):
     def __init__(self, img_height: int, img_width: int, num_output: int = 256):
         super(SiameseNetwork, self).__init__()

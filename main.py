@@ -12,6 +12,20 @@ from contrastive_loss import ContrastiveLoss
 
 import numpy as np
 import random
+import wandb
+
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="ml-iris",
+
+    # track hyperparameters and run metadata
+    config={
+        "learning_rate": 0.02,
+        "architecture": "CNN",
+        "dataset": "CIFAR-100",
+        "epochs": 10,
+    }
+)
 
 
 def train_loop(dataloader: DataLoader,
@@ -22,7 +36,7 @@ def train_loop(dataloader: DataLoader,
     num_batches = len(dataloader)
     size = len(dataloader.dataset)
     model.train()
-    
+
     train_loss, accuracy = 0, 0
     for batch_index, (img1, img2, label) in enumerate(dataloader):
         img1 = img1.to(device, non_blocking=True)
@@ -37,10 +51,10 @@ def train_loop(dataloader: DataLoader,
         # adam step
         optimizer.step()
         optimizer.zero_grad()
-        
-        
+
         eucledian_distance = nn.functional.pairwise_distance(output1, output2)
-        accuracy += (eucledian_distance.argmax() == label).type(torch.float).sum().item()
+        accuracy += (eucledian_distance.argmax() ==
+                     label).type(torch.float).sum().item()
 
         if batch_index % 100 == 0:
             loss, current = loss.item(), (batch_index + 1) * len(img1)
@@ -88,47 +102,48 @@ def train(train_dataloader: DataLoader,
           epochs: int,
           name: str = 'model'):
     optimizer = optimizer_fn(model.parameters(), learning_rate)
-    train_accuracies = []
-    test_accuracies = []
-    train_losses = []
-    test_losses = []
-
-    best_test_loss = 1e5
-    best_test_accuracy = .0
+    train_accuracies, train_losses, val_accuracies, val_losses = [], [], [], []
+    
+    best_val_loss = 1e5
+    best_val_accuracy = .0
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         train_loss, train_accuracy = train_loop(train_dataloader, model,
-                                loss_fn, optimizer, device)
-        test_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)
+                                                loss_fn, optimizer, device)
+        val_accuracy, val_loss = test_loop(test_dataloader, model, loss_fn)
 
+        wandb.log({"train_accuracy": train_accuracy, 
+                   "train_loss": train_loss,
+                   "val_accuracy": val_accuracy,
+                   "val_loss": val_loss})
+        
         train_accuracies.append(train_accuracy)
         train_losses.append(train_loss)
-        test_accuracies.append(test_accuracy)
-        test_losses.append(test_loss)
+        val_accuracies.append(val_accuracy)
+        val_losses.append(val_loss)
 
         print(f"accuracy: {(train_accuracy):>0.1f}%, loss: {train_loss:>8f} \n" +
-              f"val_accuracy: {(test_accuracy):>0.1f}%, val_loss: {test_loss:>8f}")
+              f"val_accuracy: {(val_accuracy):>0.1f}%, val_loss: {val_loss:>8f}")
 
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
-            best_test_accuracy = test_accuracy
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_val_accuracy = val_accuracy
 
             print(f'Best model has val_accuracy:' +
-                  f'{(best_test_accuracy):>0.1f}%, val_loss: {best_test_loss:>8f}')
+                  f'{(best_val_accuracy):>0.1f}%, val_loss: {best_val_loss:>8f}')
             torch.save({
                 'epoch': epochs,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss_fn': loss_fn,
                 'learning_rate': learning_rate,
-                'best_test_loss': best_test_loss,
-                'best_test_accuracy': best_test_accuracy,
+                'best_val_loss': best_val_loss,
+                'best_val_accuracy': best_val_accuracy,
             }, 'model-checkpoint.pt')
     print("Training is done!")
     
     filename = f'{name}.png'
-    plot_history(train_accuracies, test_accuracies, train_losses, test_losses, filename)
-
+    plot_history(train_accuracies, val_accuracies, train_losses, val_losses, filename)
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
@@ -196,7 +211,7 @@ if __name__ == '__main__':
           epochs)
     # model = torch.load('nu_model.pt')
     # train_accuracy, train_loss = test_loop(train_dataloader, model, loss_fn)
-    # test_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)
+    # val_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)
 
     # print(train_accuracy, train_loss)
-    # print(test_accuracy, test_loss)
+    # print(val_accuracy, test_loss)
