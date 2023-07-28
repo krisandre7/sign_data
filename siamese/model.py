@@ -1,9 +1,13 @@
 import torch.nn as nn
+import torch
 from torch import Tensor
 
 class SiameseNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, img_height: int, img_width: int, num_output: int = 256):
         super(SiameseNetwork, self).__init__()
+        self.img_height = img_height
+        self.img_width = img_width
+        self.num_output =  num_output
         
         # Setting up the Sequential of CNN Layers
         self.cnn1 = nn.Sequential(
@@ -21,15 +25,18 @@ class SiameseNetwork(nn.Module):
             nn.Conv2d(256,384 , kernel_size=3,stride=1,padding=1),
             nn.ReLU(inplace=True),
             
-            nn.Conv2d(384,256 , kernel_size=3,stride=1,padding=1),
+            nn.Conv2d(384, self.num_output, kernel_size=3,stride=1,padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(3, stride=2),
             nn.Dropout(p=0.3)
         )
+        
+        # Compute the input size for the fully connected layers based on the output shape of the last convolutional layer
+        self.fc_input_size = self._get_fc_input_size()
 
         # Defining the fully connected layers
         self.fc1 = nn.Sequential(
-            nn.Linear(30976, 1024),
+            nn.Linear(self.fc_input_size, 1024),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
             
@@ -37,6 +44,16 @@ class SiameseNetwork(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(128,2)
         )
+        
+    def _get_fc_input_size(self):
+        # Calculate the output shape of the last convolutional layer
+        dummy_input = torch.zeros(1, 1, self.img_height, self.img_width)
+        with torch.no_grad():
+            dummy_output = self.cnn1(dummy_input)
+        _, channels, height, width = dummy_output.shape
+
+        # Calculate the input size for the fully connected layers
+        return channels * height * width
   
     def forward_once(self, x):
         # Forward pass 
