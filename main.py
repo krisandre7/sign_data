@@ -19,9 +19,11 @@ def train_loop(dataloader: DataLoader,
                loss_fn: nn.Module,
                optimizer: Optimizer,
                device: torch.device):
-
+    num_batches = len(dataloader)
     size = len(dataloader.dataset)
     model.train()
+    
+    train_loss, accuracy = 0, 0
     for batch_index, (img1, img2, label) in enumerate(dataloader):
         img1 = img1.to(device, non_blocking=True)
         img2 = img2.to(device, non_blocking=True)
@@ -29,17 +31,24 @@ def train_loop(dataloader: DataLoader,
 
         # forward
         output1, output2 = model(img1, img2)
-        loss_contrastive = loss_fn(output1, output2, label)
-        loss_contrastive.backward()
+        loss = loss_fn(output1, output2, label)
+        loss.backward()
+        train_loss += loss.item()
         # adam step
         optimizer.step()
         optimizer.zero_grad()
+        
+        
+        eucledian_distance = nn.functional.pairwise_distance(output1, output2)
+        accuracy += (eucledian_distance.argmax() == label).type(torch.float).sum().item()
 
         if batch_index % 100 == 0:
-            loss_contrastive, current = loss_contrastive.item(), (batch_index + 1) * len(img1)
-            print(
-                f"loss: {loss_contrastive:>7f}  [{((current / size) * 100):.2f}%]")
-    return loss_contrastive.cpu().detach().numpy().item()
+            loss, current = loss.item(), (batch_index + 1) * len(img1)
+            print(f"loss: {loss:>7f}  [{((current / size) * 100):.2f}%]")
+
+    train_loss /= num_batches
+    accuracy /= size
+    return train_loss, accuracy*100
 
 
 def test_loop(dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module):
@@ -76,7 +85,8 @@ def train(train_dataloader: DataLoader,
           optimizer_fn: Optimizer,
           device: torch.device,
           learning_rate: float,
-          epochs: int):
+          epochs: int,
+          name: str = 'model'):
     optimizer = optimizer_fn(model.parameters(), learning_rate)
     train_accuracies = []
     test_accuracies = []
@@ -87,9 +97,8 @@ def train(train_dataloader: DataLoader,
     best_test_accuracy = .0
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train_loss = train_loop(train_dataloader, model,
+        train_loss, train_accuracy = train_loop(train_dataloader, model,
                                 loss_fn, optimizer, device)
-        train_accuracy, test_loss = test_loop(train_dataloader, model, loss_fn)
         test_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)
 
         train_accuracies.append(train_accuracy)
@@ -97,7 +106,7 @@ def train(train_dataloader: DataLoader,
         test_accuracies.append(test_accuracy)
         test_losses.append(test_loss)
 
-        print(f"accuracy: {(train_accuracy):>0.1f}%, loss: {test_loss:>8f} \n" +
+        print(f"accuracy: {(train_accuracy):>0.1f}%, loss: {train_loss:>8f} \n" +
               f"val_accuracy: {(test_accuracy):>0.1f}%, val_loss: {test_loss:>8f}")
 
         if test_loss < best_test_loss:
@@ -116,7 +125,9 @@ def train(train_dataloader: DataLoader,
                 'best_test_accuracy': best_test_accuracy,
             }, 'model-checkpoint.pt')
     print("Training is done!")
-    plot_history(train_accuracies, test_accuracies, train_losses, test_losses)
+    
+    filename = f'{name}.png'
+    plot_history(train_accuracies, test_accuracies, train_losses, test_losses, filename)
 
 
 def seed_worker(worker_id):
@@ -183,7 +194,6 @@ if __name__ == '__main__':
           device,
           learning_rate,
           epochs)
-
     # model = torch.load('nu_model.pt')
     # train_accuracy, train_loss = test_loop(train_dataloader, model, loss_fn)
     # test_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)

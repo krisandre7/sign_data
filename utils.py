@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-def plot_history(train_accuracies, test_accuracies, train_losses, test_losses):
+def plot_history(train_accuracies, test_accuracies, train_losses, test_losses, filename: str):
 #   acc = history.history['accuracy']
 
   epochs = range(len(train_losses))
@@ -18,4 +18,4 @@ def plot_history(train_accuracies, test_accuracies, train_losses, test_losses):
   plt.title('Training and validation loss')
   plt.legend()
 
-  plt.show()
+  plt.savefig(filename)
