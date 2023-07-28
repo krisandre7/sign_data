@@ -14,18 +14,18 @@ import numpy as np
 import random
 import wandb
 
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="ml-iris",
+# wandb.init(
+#     # set the wandb project where this run will be logged
+#     project="ml-iris",
 
-    # track hyperparameters and run metadata
-    config={
-        "learning_rate": 0.02,
-        "architecture": "CNN",
-        "dataset": "CIFAR-100",
-        "epochs": 10,
-    }
-)
+#     # track hyperparameters and run metadata
+#     config={
+#         "learning_rate": 0.02,
+#         "architecture": "CNN",
+#         "dataset": "CIFAR-100",
+#         "epochs": 10,
+#     }
+# )
 
 
 def train_loop(dataloader: DataLoader,
@@ -112,10 +112,10 @@ def train(train_dataloader: DataLoader,
                                                 loss_fn, optimizer, device)
         val_accuracy, val_loss = test_loop(test_dataloader, model, loss_fn)
 
-        wandb.log({"train_accuracy": train_accuracy, 
-                   "train_loss": train_loss,
-                   "val_accuracy": val_accuracy,
-                   "val_loss": val_loss})
+        # wandb.log({"train_accuracy": train_accuracy, 
+        #            "train_loss": train_loss,
+        #            "val_accuracy": val_accuracy,
+        #            "val_loss": val_loss})
         
         train_accuracies.append(train_accuracy)
         train_losses.append(train_loss)
@@ -201,15 +201,16 @@ if __name__ == '__main__':
     loss_fn = ContrastiveLoss()
     optimizer_fn = torch.optim.Adam
 
-    train(train_dataloader,
-          test_dataloader,
-          model,
-          loss_fn,
-          optimizer_fn,
-          device,
-          learning_rate,
-          epochs)
-    # model = torch.load('nu_model.pt')
+    # train(train_dataloader,
+    #       test_dataloader,
+    #       model,
+    #       loss_fn,
+    #       optimizer_fn,
+    #       device,
+    #       learning_rate,
+    #       epochs)
+    model = torch.load('model-checkpoint.pt')
+    
     # train_accuracy, train_loss = test_loop(train_dataloader, model, loss_fn)
     # val_accuracy, test_loss = test_loop(test_dataloader, model, loss_fn)
 

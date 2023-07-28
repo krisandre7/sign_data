@@ -50,7 +50,7 @@ class SiameseNetwork(nn.Module):
             
             nn.Linear(1024, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128,2)
+            nn.Linear(128,1)
         )
         
     def _get_fc_input_size(self):
